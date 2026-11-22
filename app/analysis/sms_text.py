@@ -1,5 +1,22 @@
 """SMS analysis: features + findings (عربي + إنجليزي)."""
+import json
 import re
+from pathlib import Path
+
+_VOCAB: list[str] | None = None
+_TOKEN_RE = re.compile(r"\w+")
+
+
+def _load_vocab() -> list[str]:
+    """TF-IDF vocab for sms_xgb >= 4.0.0. Missing file -> base features only."""
+    global _VOCAB
+    if _VOCAB is None:
+        path = Path(__file__).resolve().parents[2] / "models" / "sms_tfidf_vocab.json"
+        try:
+            _VOCAB = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            _VOCAB = []
+    return _VOCAB
 
 URGENCY_AR = ["فورا", "فوراً", "عاجل", "حسابك", "اتوقف", "موقوف", "محظور", "كسبت", "جايزة", "جائزة",
               "مبروك", "رصيد", "شحن", "اضغط", "ادخل", "سجل", "فعّل", "تفعيل", "تحديث", "بياناتك",
@@ -11,7 +28,7 @@ PHONE_RE = re.compile(r"(?:\+?\d[\d\s-]{7,}\d)")
 
 def extract_sms_features(text: str, urls: list[str]) -> dict:
     lower = text.lower()
-    return {
+    feats = {
         "length": len(text),
         "num_urls": len(urls),
         "has_shortener": int(any(any(s in u for s in ("bit.ly", "t.co", "tinyurl", "cutt.ly")) for u in urls)),
@@ -22,6 +39,13 @@ def extract_sms_features(text: str, urls: list[str]) -> dict:
         "has_currency": int(bool(re.search(r"(جنيه|ج\.م|egp|\$|usd|euro|يورو)", lower))),
         "num_exclaim": text.count("!"),
     }
+    vocab = _load_vocab()
+    if vocab:
+        toks = set(_TOKEN_RE.findall(lower))
+        for w in vocab:
+            if w in toks:
+                feats[f"tok_{w}"] = 1
+    return feats
 
 
 def sms_findings(feats: dict) -> list[dict]:
