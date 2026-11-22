@@ -10,7 +10,7 @@ from app.analysis.classifier import classify
 from app.analysis.domain_intel import gather_domain_intel
 from app.analysis.email_headers import email_findings, header_checks, parse_eml
 from app.analysis.normalize import (defang, extract_urls, is_private_host, normalize_url)
-from app.analysis.sms_text import extract_sms_features, sms_findings
+from app.analysis.sms_text import extract_sms_features, sms_findings, is_arabic_sms, sms_context_findings
 from app.analysis.url_features import extract_url_features, static_url_findings
 from app.engine import ml_client
 from app.engine.risk import decide, score_findings, severity_of
@@ -98,6 +98,9 @@ async def run_analysis(db: Session, analysis: Analysis) -> Analysis:
                           else EvidenceState.inconclusive,
                           {"dns": dinfo["dns"], "rdap": dinfo["rdap"]})
 
+        if itype == ScanType.sms:
+            findings += sms_context_findings(content, urls, findings)
+
         # ---------- Threat intelligence ----------
         if urls:
             ti_results = await gather_threat_intel(db, urls)
@@ -114,7 +117,18 @@ async def run_analysis(db: Session, analysis: Analysis) -> Analysis:
             ml_ev = ml_client.predict(db, analysis.id, ScanType.url,
                                       extract_url_features(urls[0]))
         elif itype == ScanType.sms:
-            ml_ev = ml_client.predict(db, analysis.id, ScanType.sms, feats)
+            if is_arabic_sms(content):
+                # sms_xgb is trained on English text. It is not calibrated for Arabic.
+                # Score embedded URLs with the URL model; never let the English SMS
+                # model alone label a normal Arabic message as malicious.
+                if urls:
+                    ml_ev = ml_client.predict(db, analysis.id, ScanType.url, extract_url_features(urls[0]))
+                    ml_ev["data"]["context"] = "arabic_sms_url_model"
+                else:
+                    ml_ev = {"source": "ml_model", "provider": "ml", "evidence_type": "ml_prediction",
+                             "state": "unavailable", "data": {"reason": "unsupported_sms_language", "language": "ar"}}
+            else:
+                ml_ev = ml_client.predict(db, analysis.id, ScanType.sms, feats)
         else:
             ml_ev = None
         if ml_ev:
