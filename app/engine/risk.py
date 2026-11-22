@@ -47,7 +47,7 @@ def decide(score: int, findings: list[dict], evidence: list[dict]) -> tuple[Verd
     if conflicting:
         findings.append({"rule": "TI_CONFLICT",
                          "detail": "مصادر Threat Intel متعارضة - تم اعتماد التصنيف الأخطر",
-                         "weight": 10})
+                         "weight": 0})
 
     # 2) Hard block rules
     if rules & HARD_MALICIOUS_RULES:
