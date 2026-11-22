@@ -1,15 +1,15 @@
-"""ML client: Ø§Ø³ØªØ¯Ø¹Ø§Ø¡ Ø§ÙÙÙØ¯ÙÙ Ø§ÙÙØ´Ø· ÙÙ model_registry ÙØ¹ validation (ÙØªØ·ÙØ¨Ø§Øª 9, 25).
+"""ML client: استدعاء الموديل النشط من model_registry مع validation (متطلبات 9, 25).
 
-Ø§ÙÙÙØ§Ø¹Ø¯:
-- Ø§ÙÙÙØ¯ÙÙ Ø¯ÙÙÙØ ÙØ´ Ø­ÙÙ. Ø§ÙÙØªÙØ¬Ø© Ø¨ØªØªØ®Ø²Ù ÙÙ ml_predictions ÙØ¹ Ø§ÙÙØ³Ø®Ø©.
-- ÙÙØ¯ÙÙ ÙØ´ ÙÙØ¬ÙØ¯ Ø£Ù ÙØ´Ù â state = unavailable (ÙØ´ SAFE Ø£Ø¨Ø¯Ø§Ù).
-- probability Ø®Ø§Ø±Ø¬ [0,1] Ø£Ù ÙØ³Ø®Ø© ÙØ´ active â Ø§ÙÙØªÙØ¬Ø© ÙØ±ÙÙØ¶Ø© (AI/ML Result Validation).
+القواعد:
+- الموديل دليل، مش حكم. النتيجة بتتخزن في ml_predictions مع النسخة.
+- موديل مش موجود أو فشل → state = unavailable (مش SAFE أبداً).
+- probability خارج [0,1] أو نسخة مش active → النتيجة مرفوضة (AI/ML Result Validation).
 """
 import json
 import time
 from pathlib import Path
 
-import joblib  # ÙÙØ¬ÙØ¯ Ø¶ÙÙ scikit-learn dependencies
+import joblib  # موجود ضمن scikit-learn dependencies
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -34,7 +34,7 @@ def active_model(db: Session, task: ScanType) -> ModelRegistry | None:
 
 
 def predict(db: Session, analysis_id, task: ScanType, features: dict) -> dict:
-    """Ø¨ÙØ±Ø¬Ø¹ evidence dict. Ø¹ÙØ¯Ø© Ø§ÙØ¥Ø®Ø±Ø§Ø¬: {label, probability, threshold, model_version}."""
+    """بيرجع evidence dict. عقدة الإخراج: {label, probability, threshold, model_version}."""
     model = active_model(db, task)
     if not model:
         return {"source": EvidenceSource.ml_model.value, "provider": "ml",
@@ -63,7 +63,7 @@ def predict(db: Session, analysis_id, task: ScanType, features: dict) -> dict:
                 "data": {"label": label, "probability": round(proba, 4),
                          "threshold": threshold, "model_name": model.name,
                          "model_version": model.version},
-                "weight": 0}  # Ø§ÙÙØ²Ù Ø¨ÙØªØ­Ø³Ø¨ ÙÙ Ø§ÙÙ risk engine
+                "weight": 0}  # الوزن بيتحسب في الـ risk engine
     except FileNotFoundError:
         return {"source": EvidenceSource.ml_model.value, "provider": "ml",
                 "evidence_type": "ml_prediction",
@@ -79,17 +79,19 @@ def predict(db: Session, analysis_id, task: ScanType, features: dict) -> dict:
 
 
 def ml_finding(ml_evidence: dict) -> dict | None:
-    """ØªØ­ÙÙÙ ØªÙÙØ¹ Ø§ÙÙÙØ¯ÙÙ ÙÙ Finding Ø¨ÙØ²Ù ÙØªØ¯Ø±Ø¬ Ø­Ø³Ø¨ Ø§ÙÙ probability."""
+    """تحويل توقع الموديل لـ Finding بوزن متدرج حسب الـ probability."""
     if ml_evidence["state"] != "confirmed":
         return None
     proba = ml_evidence["data"]["probability"]
     label = ml_evidence["data"]["label"]
     ver = ml_evidence["data"]["model_version"]
     if label == "phishing":
+        # توقع تصيد من الموديل لازم يبقى حاسم: لوحده يوصل لـ SUSPICIOUS/HIGH_RISK على الأقل
         weight = 45 if proba < 0.8 else (60 if proba < 0.95 else 75)
         return {"rule": "ML_PHISHING",
-                "detail": f"ÙÙØ¯ÙÙ {ver} ÙØªÙÙØ¹ ØªØµÙØ¯ Ø¨Ø§Ø­ØªÙØ§Ù {proba:.0%}", "weight": weight}
+                "detail": f"موديل {ver} متوقع تصيد باحتمال {proba:.0%}", "weight": weight}
     if proba <= 0.05:
+        # تنبيه معلوماتي فقط - وزن صفر: توقع "سليم" من الموديل مش بيقلل أدلة تانية أبداً
         return {"rule": "ML_CLEAN_HIGH_CONF",
-                "detail": f"ÙÙØ¯ÙÙ {ver} ÙØ§Ø«Ù Ø¥Ù Ø§ÙØ±Ø§Ø¨Ø· Ø³ÙÙÙ ({1 - proba:.0%})", "weight": 0}
+                "detail": f"موديل {ver} واثق إن الرابط سليم ({1 - proba:.0%})", "weight": 0}
     return None
