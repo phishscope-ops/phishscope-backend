@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .database import get_db
 
-ph = PasswordHasher()  # Argon2id بإعدادات OWASP الافتراضية
+ph = PasswordHasher()  # Argon2id Ø¨Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª OWASP Ø§ÙØ§ÙØªØ±Ø§Ø¶ÙØ©
 oauth2 = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
@@ -39,8 +39,8 @@ def create_access_token(user_id: uuid.UUID, role: str) -> str:
 
 
 def create_refresh_token(user_id: uuid.UUID) -> tuple[str, str]:
-    """بيرجع (التوكن, الـ SHA-256 hash اللي بيتخزن في user_sessions)."""
-    raw = _token({"sub": str(user_id)}, timedelta(days=settings.refresh_token_days), "refresh")
+    """Ø¨ÙØ±Ø¬Ø¹ (Ø§ÙØªÙÙÙ, Ø§ÙÙ SHA-256 hash Ø§ÙÙÙ Ø¨ÙØªØ®Ø²Ù ÙÙ user_sessions)."""
+    raw = _token({"sub": str(user_id), "jti": uuid.uuid4().hex}, timedelta(days=settings.refresh_token_days), "refresh")
     return raw, hashlib.sha256(raw.encode()).digest().hex()
 
 
@@ -55,7 +55,7 @@ def decode_token(token: str, kind: str = "access") -> dict:
 
 
 def get_current_user(token: str = Depends(oauth2), db: Session = Depends(get_db)):
-    from app import models  # import متأخر عشان نتفادى circular
+    from app import models  # import ÙØªØ£Ø®Ø± Ø¹Ø´Ø§Ù ÙØªÙØ§Ø¯Ù circular
 
     payload = decode_token(token)
     user = db.get(models.User, uuid.UUID(payload["sub"]))
