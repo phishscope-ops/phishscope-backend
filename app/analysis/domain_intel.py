@@ -90,7 +90,8 @@ def domain_findings(dns_info: dict, rdap_info: dict) -> list[dict]:
     if dns_info.get("error") == "no_dns":
         add("NO_DNS", "الدومين ملوش سجلات DNS", 25)
     if not dns_info.get("has_mx"):
-        add("NO_MX", "الدومين مفيهوش MX (مش بيستقبل إيميلات، شائع في دومينات التصيد)", 5)
+        # A web hostname is not required to receive email. No MX is not phishing evidence.
+        add("NO_MX", "اسم المضيف لا يستقبل البريد، وده طبيعي لمواقع الويب", 0)
     age = rdap_info.get("age_days")
     if age is not None:
         if age < 30:
