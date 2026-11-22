@@ -6,6 +6,8 @@
 - أدلة متعارضة → بناخد الأعلى خطورة وبنسجل التعارض (متطلب 24).
 - Thresholds مبدئية وهتتعاير على داتا حقيقية.
 """
+import math
+
 from app.models import Severity, Verdict
 
 # دليل واحد قوي يكفي يقفل الحكم
@@ -18,10 +20,19 @@ CAP = 100
 
 
 def score_findings(findings: list[dict]) -> int:
-    total = sum(f.get("weight", 0) for f in findings)
-    if any(f.get("rule") in HARD_MALICIOUS_RULES for f in findings):
+    # This is a deterministic risk index, not a statistical probability.
+    # Keep verdict thresholds intact, but avoid saturating every strong case at 100.
+    total = max(0, sum(f.get("weight", 0) for f in findings))
+    hard = {f.get("rule") for f in findings if f.get("rule") in HARD_MALICIOUS_RULES}
+    if hard:
         total = max(total, 80)
-    return max(0, min(CAP, total))
+    independent_ti = {r for r in hard if r.startswith("TI_")}
+    if len(independent_ti) >= 3:
+        return 100
+    if total < 80:
+        return round(total)
+    return min(99, 80 + round(19 * (1 - math.exp(-(total - 80) / 25))))
+
 
 
 def severity_of(score: int) -> Severity:
