@@ -14,6 +14,7 @@ from app.analysis.sms_text import extract_sms_features, sms_findings
 from app.analysis.url_features import extract_url_features, static_url_findings
 from app.engine import ml_client
 from app.engine.risk import decide, score_findings, severity_of
+from app.engine.threat_types import classify_threat
 from app.intel.providers import gather_threat_intel, ti_findings
 from app.integrations.n8n import send_alert_event
 from app.models import (Analysis, AnalysisEvidence, EvidenceSource, EvidenceState,
@@ -128,6 +129,9 @@ async def run_analysis(db: Session, analysis: Analysis) -> Analysis:
         # ---------- Decision ----------
         score = score_findings(findings)
         verdict, explanation, actions = decide(score, findings, evidence_rows)
+        ttext = analysis.normalized_input or content
+        tfeats = feats if itype == ScanType.sms else (extract_url_features(urls[0]) if urls else {})
+        analysis.threat_type = classify_threat(itype, verdict, findings, ttext, tfeats)
         analysis.risk_score = score
         analysis.severity = severity_of(score)
         analysis.verdict = verdict

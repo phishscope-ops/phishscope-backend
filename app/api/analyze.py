@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal, get_db, set_rls_context
 from app.core.security import get_current_user
 from app.engine.pipeline import run_analysis
+from app.engine.threat_types import threat_label
 from app.models import Analysis, ScanStatus, ScanType, Severity, User, Verdict
 from app.schemas import (AnalyzeIn, AnalyzeOut, EvidenceOut, HistoryItem, HistoryOut,
                          ResultOut)
@@ -66,6 +67,8 @@ def _to_result(db: Session, a: Analysis) -> ResultOut:
                               evidence_type=e.evidence_type, state=e.state.value,
                               data=e.data, weight=e.weight) for e in a.evidence],
         iocs=a.iocs or [],
+        threat_type=a.threat_type,
+        threat_label=threat_label(a.threat_type) if a.threat_type else None,
         recommended_actions=[a.recommended_action] if a.recommended_action else [],
         explanation=a.explanation, created_at=a.created_at, completed_at=a.completed_at)
 

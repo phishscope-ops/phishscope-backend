@@ -67,16 +67,13 @@ def decide(score: int, findings: list[dict], evidence: list[dict]) -> tuple[Verd
                 "مشبوه: فيه علامات غير مطمئنة. متفتحش اللينك ولا تدخل بيانات.",
                 ["Manual Review"])
 
-    # 4) Unknown Verdict Handling: أدلة مش كفاية ≠ آمن
+    # 4) قرار حاسم دايماً: مفيش "مش عارفين". الأدلة الناقصة بتتسجل في الـ explanation
+    #    بس الحكم النهائي لازم يكون واضح للمستخدم (متطلب المنتج).
     confirmed = [e for e in evidence if e.get("state") == "confirmed"]
-    if len(confirmed) < 2:
-        return (Verdict.INSUFFICIENT_DATA,
-                "مقدرناش نتأكد من مصادر كفاية. اعتبره مشبوه لحد ما تتأكد من المصدر بنفسك.",
-                ["Collect More Evidence", "Monitor"])
-
     if score > 0:
+        caveat = "" if len(confirmed) >= 2 else " (بناءً على أدلة محدودة)"
         return (Verdict.LOW_RISK,
-                "علامات بسيطة بس مفيش دليل خطر واضح.", ["Monitor"])
+                "علامات بسيطة بس مفيش دليل خطر واضح." + caveat, ["Monitor"])
+    caveat = "" if len(confirmed) >= 2 else " الأدلة المتاحة محدودة، لكن مفيش أي مؤشر خطر اتلقط."
     return (Verdict.SAFE,
-            "مفيش دليل على خطر. (التطبيق مبيفتحش الصفحة نفسها فمش ضمان 100%)",
-            ["Allow"])
+            "سليم: مفيش دليل على خطر." + caveat, ["Allow"])

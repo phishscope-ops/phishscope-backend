@@ -73,6 +73,8 @@ class ResultOut(BaseModel):
     evidence: list[EvidenceOut] = []
     iocs: list = []
     recommended_actions: list[str] = []
+    threat_type: str | None = None
+    threat_label: str | None = None
     explanation: str | None = None
     created_at: datetime | None = None
     completed_at: datetime | None = None
@@ -86,6 +88,7 @@ class HistoryItem(BaseModel):
     risk_score: int | None
     severity: Severity | None
     verdict: Verdict | None
+    threat_type: str | None = None
     created_at: datetime
 
 

@@ -1,0 +1,37 @@
+{
+ "pr_auc": 0.9964,
+ "roc_auc": 0.9917,
+ "threshold": 0.633103,
+ "precision": 0.9866,
+ "recall": 0.98,
+ "fpr": 0.0333,
+ "confusion": {
+  "tp": 294,
+  "fp": 4,
+  "tn": 116,
+  "fn": 6
+ },
+ "feature_names": [
+  "caps_ratio",
+  "has_currency",
+  "has_phone",
+  "has_shortener",
+  "length",
+  "num_exclaim",
+  "num_urls",
+  "urgency_ar_hits",
+  "urgency_en_hits"
+ ],
+ "trained_rows": 2100,
+ "categories": [
+  "delivery_scam",
+  "legit",
+  "malicious_link",
+  "otp_fraud",
+  "phishing_credential",
+  "prize_scam",
+  "spam_ad"
+ ],
+ "dataset": "phishscope_sms_dataset_v2 (2100 rows, 7 categories, UCI ham/spam + synthetic AR/EN)",
+ "threshold_policy": "max Youden J subject to FPR<=5% (product favors decisive phishing catches)"
+}

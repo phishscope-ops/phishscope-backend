@@ -130,6 +130,7 @@ class Analysis(Base):
     findings: Mapped[list] = mapped_column(sa.JSON, default=list)
     iocs: Mapped[list] = mapped_column(sa.JSON, default=list)
     recommended_action: Mapped[str | None] = mapped_column(sa.Text)
+    threat_type: Mapped[str | None] = mapped_column(sa.Text)
     explanation: Mapped[str | None] = mapped_column(sa.Text)
     error_message: Mapped[str | None] = mapped_column(sa.Text)
     processing_ms: Mapped[int | None] = mapped_column(sa.Integer)
