@@ -87,7 +87,12 @@ def ml_finding(ml_evidence: dict) -> dict | None:
     ver = ml_evidence["data"]["model_version"]
     if label == "phishing":
         # توقع تصيد من الموديل لازم يبقى حاسم: لوحده يوصل لـ SUSPICIOUS/HIGH_RISK على الأقل
-        weight = 45 if proba < 0.8 else (60 if proba < 0.95 else 75)
+        threshold = float(ml_evidence["data"].get("threshold", 0.5))
+        if proba < 0.8:
+            fraction = max(0.0, min(1.0, (proba - threshold) / max(0.8 - threshold, 0.01)))
+            weight = 45 + round(14 * fraction)
+        else:
+            weight = 60 + round(19 * min(1.0, (proba - 0.8) / 0.2))
         return {"rule": "ML_PHISHING",
                 "detail": f"موديل {ver} متوقع تصيد باحتمال {proba:.0%}", "weight": weight}
     if proba <= 0.05:
