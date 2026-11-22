@@ -1,5 +1,7 @@
 """Accuracy regressions. Run: python -m unittest discover -s tests -v"""
 import unittest
+import logging
+from app.core.logging import RedactingFilter
 from unittest.mock import patch
 
 import httpx
@@ -15,6 +17,14 @@ from app.models import ScanType, Verdict
 
 
 class AccuracyTests(unittest.TestCase):
+    def test_redaction_preserves_numeric_log_formatting(self):
+        record=logging.LogRecord('httpx',logging.INFO,'test',1,'HTTP %s status %d password=%s',('https://example.org/private',200,'test-value'),None)
+        self.assertTrue(RedactingFilter().filter(record))
+        message=record.getMessage()
+        self.assertIn('status 200',message)
+        self.assertNotIn('https://',message)
+        self.assertNotIn('test-value',message)
+
     def test_risk_index_is_monotonic_and_does_not_always_saturate(self):
         scores=[score_findings([{'weight':w}]) for w in [80,90,100,130,170]]
         self.assertEqual(scores,sorted(set(scores)))
