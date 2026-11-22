@@ -6,6 +6,7 @@ import httpx
 
 from app.analysis.normalize import extract_urls
 from app.analysis.domain_intel import domain_findings
+from app.analysis.sms_text import is_arabic_sms, sms_context_findings
 from app.engine.ml_client import ml_finding
 from app.engine.risk import decide, score_findings
 from app.engine.threat_types import classify_threat
@@ -14,6 +15,17 @@ from app.models import ScanType, Verdict
 
 
 class AccuracyTests(unittest.TestCase):
+    def test_arabic_sms_model_guard(self):
+        self.assertTrue(is_arabic_sms('المقال اللي اتكلمنا عنه موجود هنا https://www.wikipedia.org'))
+        self.assertFalse(is_arabic_sms('Congratulations you won a prize! ا'))
+
+    def test_prize_keywords_alone_do_not_trigger_context_rule(self):
+        self.assertEqual(sms_context_findings('ربحت جائزة 500 جنيه', ['https://example.com'], []), [])
+
+    def test_prize_with_independent_unsafe_url_signal_is_flagged(self):
+        f=sms_context_findings('ربحت جائزة 500 جنيه', ['http://example.tk'], [{'rule':'SUSPICIOUS_TLD'}])
+        self.assertEqual(f[0]['weight'],25)
+
     def test_schemeless_free_tld(self):
         self.assertEqual(extract_urls('عرض vodafone-cash-win.tk/claim'), ['vodafone-cash-win.tk/claim'])
 
