@@ -62,8 +62,9 @@ async def check_phishtank(client: httpx.AsyncClient, db: Session, url: str) -> d
         r.raise_for_status()
         res = r.json()["results"]
         in_db, verified = res.get("in_database"), res.get("verified") == "y"
-        verdict = Verdict.MALICIOUS if (in_db and verified) else (
-            Verdict.SUSPICIOUS if in_db else Verdict.SAFE)
+        if not in_db:
+            return {"provider": p, "verdict": None, "data": res, "state": "inconclusive"}
+        verdict = Verdict.MALICIOUS if verified else Verdict.SUSPICIOUS
         out = {"provider": p, "verdict": verdict.value, "data": res, "state": "confirmed"}
         _to_cache(db, p, url, IocType.url, verdict, res)
         return out
@@ -76,7 +77,7 @@ async def check_urlhaus(client: httpx.AsyncClient, db: Session, url: str) -> dic
     p = "urlhaus"
     if not settings.urlhaus_auth_key:
         return _unavailable(p, "no_api_key")
-    if (hit := _from_cache(db, p, url)):
+    if (hit := _from_cache(db, p, url)) and hit.get("data", {}).get("query_status") == "ok":
         return hit
     try:
         r = await client.post("https://urlhaus-api.abuse.ch/v1/url/",
@@ -84,9 +85,13 @@ async def check_urlhaus(client: httpx.AsyncClient, db: Session, url: str) -> dic
                               headers={"Auth-Key": settings.urlhaus_auth_key})
         r.raise_for_status()
         res = r.json()
-        listed = res.get("query_status") == "ok"
-        verdict = Verdict.MALICIOUS if listed else Verdict.SAFE
+        query_status = res.get("query_status")
         data = {k: res.get(k) for k in ("query_status", "threat", "tags", "date_added")}
+        if query_status == "no_results":
+            return {"provider": p, "verdict": None, "data": data, "state": "inconclusive"}
+        if query_status != "ok":
+            return _unavailable(p, str(query_status or "missing_query_status"))
+        verdict = Verdict.MALICIOUS
         out = {"provider": p, "verdict": verdict.value, "data": data, "state": "confirmed"}
         _to_cache(db, p, url, IocType.url, verdict, data)
         return out
