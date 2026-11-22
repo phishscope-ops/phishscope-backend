@@ -39,7 +39,7 @@ async def analyze(request: Request, body: AnalyzeIn, background: BackgroundTasks
     if existing:
         return AnalyzeOut(analysis_id=existing.id, status=existing.status)
 
-    analysis = Analysis(user_id=user.id, input_type=body.input_type or ScanType.url,
+    analysis = Analysis(user_id=user.id, input_type=body.input_type,
                         raw_input=body.content, normalized_input=body.content[:2000],
                         request_hash=req_hash)
     db.add(analysis)
