@@ -42,3 +42,19 @@ def sms_findings(feats: dict) -> list[dict]:
     if feats["has_currency"] and feats["num_urls"] > 0:
         add("SMS_MONEY_LINK", "مبلغ مالي مع لينك", 10)
     return findings
+
+
+def is_arabic_sms(text: str) -> bool:
+    letters = [c for c in text if c.isalpha()]
+    arabic = sum("\u0621" <= c <= "\u064a" for c in letters)
+    return arabic >= 5 and arabic / max(len(letters), 1) >= 0.2
+
+
+def sms_context_findings(text: str, urls: list[str], findings: list[dict]) -> list[dict]:
+    """A money/prize lure corroborated by an unsafe destination, not keywords alone."""
+    prize = any(w in text.lower() for w in ("جائزة", "جايزة", "ربحت", "كسبت", "prize", "winner"))
+    money = bool(re.search(r"(جنيه|ج\.م|egp|\$|usd)", text.lower()))
+    unsafe = any(f.get("rule") in {"NO_DNS", "SUSPICIOUS_TLD", "BRAND_SPOOF", "IP_HOST", "PUNYCODE"} for f in findings)
+    if urls and prize and money and unsafe:
+        return [{"rule": "SMS_PRIZE_UNSAFE_DESTINATION", "detail": "وعد بجائزة مالية مع رابط له مؤشرات خطورة مستقلة", "weight": 25}]
+    return []
