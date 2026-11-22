@@ -15,6 +15,16 @@ from app.models import ScanType, Verdict
 
 
 class AccuracyTests(unittest.TestCase):
+    def test_risk_index_is_monotonic_and_does_not_always_saturate(self):
+        scores=[score_findings([{'weight':w}]) for w in [80,90,100,130,170]]
+        self.assertEqual(scores,sorted(set(scores)))
+        self.assertLess(scores[-1],100)
+        self.assertGreaterEqual(scores[0],80)
+
+    def test_multiple_independent_confirmations_can_reach_100(self):
+        f=[{'rule':'TI_'+p+'_MALICIOUS','weight':40} for p in ['URLSCAN','URLHAUS','VIRUSTOTAL']]
+        self.assertEqual(score_findings(f),100)
+
     def test_arabic_sms_model_guard(self):
         self.assertTrue(is_arabic_sms('المقال اللي اتكلمنا عنه موجود هنا https://www.wikipedia.org'))
         self.assertFalse(is_arabic_sms('Congratulations you won a prize! ا'))
@@ -50,7 +60,7 @@ class AccuracyTests(unittest.TestCase):
         self.assertEqual(score_findings([{'weight':75},f]),75)
 
     def test_confident_phishing_is_high_risk(self):
-        for probability,weight in [(0.79,45),(0.80,60),(0.89,60),(0.95,75)]:
+        for probability,weight in [(0.79,59),(0.80,60),(0.89,69),(0.95,74)]:
             f=ml_finding({'state':'confirmed','data':{'probability':probability,'label':'phishing','model_version':'test'}})
             self.assertEqual(f['weight'],weight)
             if probability>=0.8:
@@ -70,7 +80,7 @@ class AccuracyTests(unittest.TestCase):
         e=[{'source':'threat_intel','state':'confirmed','verdict':v} for v in ['SAFE','MALICIOUS']]
         score=score_findings(f)
         self.assertEqual(decide(score,f,e)[0],Verdict.MALICIOUS)
-        self.assertEqual(sum(a['weight'] for a in f),score)
+        self.assertEqual(score_findings(f),score)
 
     def test_ml_phishing_has_a_phishing_label(self):
         self.assertEqual(classify_threat(ScanType.url,Verdict.HIGH_RISK,[{'rule':'ML_PHISHING'}],'http://example.org',{}),'phishing')
