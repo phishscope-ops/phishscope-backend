@@ -5,6 +5,7 @@
 from app.models import ScanType, Verdict
 
 TYPES = {
+    "phishing": "تصيد احتيالي",
     "credential_phishing": "تصيّد بيانات حسابات/بطاقات",
     "prize_scam": "احتيال جوائز وأرباح وهمية",
     "delivery_scam": "احتيال شحنات وجمارك",
@@ -52,6 +53,8 @@ def classify_threat(itype: ScanType, verdict: Verdict, findings: list[dict],
         return "spam_ad"
     if itype == ScanType.sms:
         return "smishing"
+    if "ML_PHISHING" in rules or "TI_PHISHTANK_MALICIOUS" in rules:
+        return "phishing"
     return "suspicious_generic"
 
 
