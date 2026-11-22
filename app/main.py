@@ -48,3 +48,12 @@ async def add_security_headers(request: Request, call_next):
 
 # تطبيق الـ rate limit على analyze عبر decorator بعد التعريف
 analyze.analyze = limiter.limit(settings.rate_limit_analyze)(analyze.analyze)
+
+
+# تقديم الموقع الثابت same-origin — آخر حاجة خالص عشان /api والـ docs ميتغطّوش
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+if WEB_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
