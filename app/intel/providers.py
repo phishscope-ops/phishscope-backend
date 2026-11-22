@@ -126,7 +126,7 @@ async def check_safe_browsing(client: httpx.AsyncClient, db: Session, url: str) 
 async def check_urlscan(client: httpx.AsyncClient, db: Session, url: str) -> dict:
     """urlscan.io search (من غير submit: الـ search مجاني وبيكفي لو الرابط اتفحص قبل كده)."""
     p = "urlscan"
-    if (hit := _from_cache(db, p, url)):
+    if (hit := _from_cache(db, p, url)) and hit.get("data", {}).get("verdict_source") == "result_api":
         return hit
     try:
         headers = {"API-Key": settings.urlscan_api_key} if settings.urlscan_api_key else {}
@@ -137,11 +137,20 @@ async def check_urlscan(client: httpx.AsyncClient, db: Session, url: str) -> dic
         if not results:
             return {"provider": p, "verdict": None, "data": {"reason": "no_prior_scan"},
                     "state": "inconclusive"}  # مفيش فحص سابق ≠ آمن
-        verdicts = results[0].get("verdicts", {}).get("overall", {})
-        malicious = verdicts.get("malicious", False)
+        # Search results contain scan metadata, not the verdict. Read the result API.
+        import uuid
+        scan_id = str(uuid.UUID(results[0]["_id"]))
+        detail = await client.get(f"https://urlscan.io/api/v1/result/{scan_id}/", headers=headers)
+        detail.raise_for_status()
+        verdicts = detail.json().get("verdicts", {}).get("overall", {})
+        if "malicious" not in verdicts:
+            return {"provider": p, "verdict": None, "data": {"reason": "no_verdict"},
+                    "state": "inconclusive"}
+        malicious = verdicts["malicious"]
         score = verdicts.get("score", 0)
         verdict = Verdict.MALICIOUS if malicious else (Verdict.SUSPICIOUS if score >= 50 else Verdict.SAFE)
-        data = {"score": score, "malicious": malicious, "tags": verdicts.get("tags", [])}
+        data = {"score": score, "malicious": malicious, "tags": verdicts.get("tags", []),
+                "verdict_source": "result_api"}
         out = {"provider": p, "verdict": verdict.value, "data": data, "state": "confirmed"}
         _to_cache(db, p, url, IocType.url, verdict, data)
         return out
