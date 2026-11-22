@@ -283,3 +283,37 @@ def audit(db, action: str, user_id: uuid.UUID | None = None, entity: str | None 
     """Security Audit Logging (متطلب 3). append-only على PG بفضل الـ triggers."""
     db.add(AuditLog(user_id=user_id, action=action, entity=entity,
                     entity_id=entity_id, ip=ip, metadata_=meta))
+
+
+class AlertPrefs(Base):
+    """تفضيلات التنبيه لكل مستخدم (مجاني ودائم: in-app + Telegram + Slack webhook)."""
+    __tablename__ = "alert_prefs"
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID, sa.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    threshold: Mapped[int] = mapped_column(sa.SmallInteger, default=70)
+    in_app: Mapped[bool] = mapped_column(sa.Boolean, default=True)
+    telegram_enabled: Mapped[bool] = mapped_column(sa.Boolean, default=True)
+    telegram_chat_id: Mapped[str | None] = mapped_column(sa.String(32))
+    slack_webhook_url: Mapped[str | None] = mapped_column(sa.Text)
+    slack_enabled: Mapped[bool] = mapped_column(sa.Boolean, default=False)
+    n8n_enabled: Mapped[bool] = mapped_column(sa.Boolean, default=True)
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID, sa.ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    analysis_id: Mapped[uuid.UUID | None] = mapped_column(GUID, sa.ForeignKey("analyses.id", ondelete="SET NULL"))
+    risk_score: Mapped[int] = mapped_column(sa.SmallInteger)
+    verdict: Mapped[str | None] = mapped_column(sa.String(32))
+    title: Mapped[str] = mapped_column(sa.Text, default="")
+    channels: Mapped[list] = mapped_column(sa.JSON, default=list)  # القنوات اللي اتبعتت فعلاً
+    read: Mapped[bool] = mapped_column(sa.Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), server_default=sa.func.now(), index=True)
+
+
+class TelegramLinkCode(Base):
+    """كود ربط تيليجرام: استخدام واحد، صلاحية ١٥ دقيقة."""
+    __tablename__ = "telegram_link_codes"
+    code: Mapped[str] = mapped_column(sa.String(16), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID, sa.ForeignKey("users.id", ondelete="CASCADE"))
+    expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))

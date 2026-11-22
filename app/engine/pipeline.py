@@ -16,6 +16,8 @@ from app.engine import ml_client
 from app.engine.risk import decide, score_findings, severity_of
 from app.engine.threat_types import classify_threat
 from app.intel.providers import gather_threat_intel, ti_findings
+import logging
+log = logging.getLogger(__name__)
 from app.integrations.n8n import send_alert_event
 from app.models import (Analysis, AnalysisEvidence, EvidenceSource, EvidenceState,
                         Ioc, IocType, MessageInbox, ScanStatus, ScanType, Verdict,
@@ -188,8 +190,18 @@ async def run_analysis(db: Session, analysis: Analysis) -> Analysis:
     db.flush()
 
     # n8n event بعد اكتمال التحليل (automation فقط، مش بيقرر)
-    if analysis.status == ScanStatus.done and analysis.verdict in DANGEROUS:
-        await send_alert_event(analysis)
+    if analysis.status == ScanStatus.done:
+        prefs = None
+        try:
+            from app.engine.alerts import dispatch, get_prefs
+            prefs = get_prefs(db, analysis.user_id)
+            await dispatch(db, analysis)
+        except Exception as exc:  # التنبيهات مش بتكسر التحليل
+            log.warning("alert dispatch failed: %s", type(exc).__name__)
+        n8n_on = prefs is None or prefs.n8n_enabled
+        over = prefs is not None and (analysis.risk_score or 0) >= prefs.threshold
+        if n8n_on and (analysis.verdict in DANGEROUS or over):
+            await send_alert_event(analysis, prefs.threshold if prefs else None)
     return analysis
 
 

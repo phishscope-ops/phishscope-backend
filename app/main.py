@@ -6,7 +6,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.api import analyze, auth, misc
+from app.api import alerts, analyze, auth, misc
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.logging import setup_logging
@@ -24,6 +24,8 @@ app.include_router(auth.router)
 app.include_router(auth.users_router)
 app.include_router(analyze.router)
 app.include_router(misc.router)
+app.include_router(alerts.router)
+app.include_router(alerts.public_router)
 
 
 @app.on_event("startup")
@@ -33,6 +35,11 @@ def startup() -> None:
     if engine.dialect.name == "sqlite":
         Base.metadata.create_all(engine)
         log.info("SQLite dev database ready (models.create_all)")
+    else:
+        # جداول التنبيهات الجديدة فقط (additive، checkfirst): من غير لمس الجداول الموجودة
+        from app import models as m
+        Base.metadata.create_all(engine, tables=[
+            m.AlertPrefs.__table__, m.Alert.__table__, m.TelegramLinkCode.__table__])
     log.info("PhishScope backend started. Docs: /docs")
 
 

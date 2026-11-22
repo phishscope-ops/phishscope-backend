@@ -8,7 +8,7 @@ from app.core.config import settings
 log = logging.getLogger(__name__)
 
 
-async def send_alert_event(analysis) -> None:
+async def send_alert_event(analysis, user_threshold: int | None = None) -> None:
     if not settings.n8n_webhook_url:
         return
     payload = {
@@ -19,6 +19,7 @@ async def send_alert_event(analysis) -> None:
         "severity": analysis.severity.value if analysis.severity else None,
         "risk_score": analysis.risk_score,
         "recommended_action": analysis.recommended_action,
+        "user_threshold": user_threshold,
     }
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:

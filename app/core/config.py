@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     n8n_webhook_url: str = ""
     n8n_webhook_secret: str = ""
 
+    telegram_bot_token: str = ""
+    telegram_bot_username: str = ""
+    telegram_webhook_secret: str = ""
+
     rate_limit_analyze: str = "30/minute"
 
 
