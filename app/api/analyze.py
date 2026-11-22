@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api", tags=["analysis"])
 
 
 def _dedup_hash(content: str, itype: ScanType | None) -> bytes:
-    return hashlib.sha256(f"risk-v3|{itype.value if itype else 'auto'}|{content.strip().lower()}".encode()).digest()
+    return hashlib.sha256(f"risk-v4|{itype.value if itype else 'auto'}|{content.strip().lower()}".encode()).digest()
 
 
 @router.post("/analyze", response_model=AnalyzeOut, status_code=202)
