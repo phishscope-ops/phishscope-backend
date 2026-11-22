@@ -7,6 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.analysis.classifier import classify
 from app.core.config import settings
 from app.core.database import SessionLocal, get_db, set_rls_context
 from app.core.security import get_current_user
@@ -39,7 +40,8 @@ async def analyze(request: Request, body: AnalyzeIn, background: BackgroundTasks
     if existing:
         return AnalyzeOut(analysis_id=existing.id, status=existing.status)
 
-    analysis = Analysis(user_id=user.id, input_type=body.input_type,
+    analysis = Analysis(user_id=user.id,
+                        input_type=body.input_type or classify(body.content),
                         raw_input=body.content, normalized_input=body.content[:2000],
                         request_hash=req_hash)
     db.add(analysis)
