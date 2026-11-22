@@ -15,9 +15,10 @@ def redact(text: str) -> str:
 
 class RedactingFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        record.msg = redact(str(record.msg))
-        if record.args:
-            record.args = tuple(redact(str(a)) for a in record.args)
+        # Format while numeric arguments still have their original types.
+        # Converting a %d status code to text first breaks httpx log records.
+        record.msg = redact(record.getMessage())
+        record.args = ()
         return True
 
 
