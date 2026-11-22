@@ -10,7 +10,7 @@ from app.models import Severity, Verdict
 
 # دليل واحد قوي يكفي يقفل الحكم
 HARD_MALICIOUS_RULES = {"TI_VIRUSTOTAL_MALICIOUS", "TI_SAFE_BROWSING_MALICIOUS",
-                        "TI_URLHAUS_MALICIOUS", "TI_PHISHTANK_MALICIOUS",
+                        "TI_URLHAUS_MALICIOUS", "TI_PHISHTANK_MALICIOUS", "TI_URLSCAN_MALICIOUS",
                         "PRIVATE_IP_RESOLVE", "DMARC_FAIL"}
 
 SAFE = "SAFE"
@@ -19,6 +19,8 @@ CAP = 100
 
 def score_findings(findings: list[dict]) -> int:
     total = sum(f.get("weight", 0) for f in findings)
+    if any(f.get("rule") in HARD_MALICIOUS_RULES for f in findings):
+        total = max(total, 80)
     return max(0, min(CAP, total))
 
 
