@@ -3,7 +3,7 @@ import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -23,7 +23,7 @@ def _dedup_hash(content: str, itype: ScanType | None) -> bytes:
 
 
 @router.post("/analyze", response_model=AnalyzeOut, status_code=202)
-async def analyze(body: AnalyzeIn, background: BackgroundTasks,
+async def analyze(request: Request, body: AnalyzeIn, background: BackgroundTasks,
                   db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     set_rls_context(db, user.id, user.role.value)
     req_hash = _dedup_hash(body.content, body.input_type)
