@@ -3,7 +3,10 @@ import json
 import re
 from pathlib import Path
 
+import tldextract
+
 _VOCAB: list[str] | None = None
+_KNOWN: list[str] | None = None
 _TOKEN_RE = re.compile(r"\w+")
 
 
@@ -17,6 +20,25 @@ def _load_vocab() -> list[str]:
         except Exception:
             _VOCAB = []
     return _VOCAB
+
+
+def _load_known_domains() -> list[str]:
+    """Well-known registered domains for sms_xgb >= 4.3.0. Missing file -> feature always 0."""
+    global _KNOWN
+    if _KNOWN is None:
+        path = Path(__file__).resolve().parents[2] / "models" / "known_domains.json"
+        try:
+            _KNOWN = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            _KNOWN = []
+    return _KNOWN
+
+
+def _registered_domain(url: str) -> str:
+    ext = tldextract.extract(url)
+    if not ext.suffix:
+        return ""
+    return f"{ext.domain}.{ext.suffix}".lower()
 
 URGENCY_AR = ["فورا", "فوراً", "عاجل", "حسابك", "اتوقف", "موقوف", "محظور", "كسبت", "جايزة", "جائزة",
               "مبروك", "رصيد", "شحن", "اضغط", "ادخل", "سجل", "فعّل", "تفعيل", "تحديث", "بياناتك",
@@ -45,6 +67,10 @@ def extract_sms_features(text: str, urls: list[str]) -> dict:
         for w in vocab:
             if w in toks:
                 feats[f"tok_{w}"] = 1
+    known = set(_load_known_domains())
+    feats["all_urls_known_domain"] = int(
+        bool(urls) and bool(known) and
+        all(_registered_domain(u) in known for u in urls))
     return feats
 
 
