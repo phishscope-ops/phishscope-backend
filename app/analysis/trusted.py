@@ -17,6 +17,7 @@ TRUSTED_PLATFORMS = (
     "tiktok.com", "tiktokv.com",
     "x.com", "twitter.com", "t.co",
     "whatsapp.com", "wa.me", "whatsapp.net",
+    "accounts.google.com",  # exact sign-in host only (YouTube login); google.com itself is NOT listed
 )
 
 

@@ -20,8 +20,12 @@ OK = [
     "https://web.whatsapp.com/",
     "https://wa.me/201001234567",
     "https://l.instagram.com/?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&e=AT0x",
+    "https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin",
 ]
 BAD = [
+    "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fevil-login.tk%2F",
+    "https://accounts.google.com.evil-login.tk/ServiceLogin",
+    "https://www.google.com/url?q=https://evil.tk",
     "https://l.instagram.com/?u=https%3A%2F%2Fevil-login.tk%2F&e=AT0x",
     "https://l.facebook.com/l.php?u=https%3A%2F%2Fevil.example%2Fpay",
     "https://www.youtube.com/redirect?q=http%3A%2F%2Fevil.ml%2F",
