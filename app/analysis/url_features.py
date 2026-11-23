@@ -76,7 +76,8 @@ def static_url_findings(url: str, feats: dict) -> list[dict]:
 
     if feats["has_ip_host"]:
         add("IP_HOST", "اللينك بيستخدم IP بدل اسم دومين", 35)
-    if feats["has_at_symbol"]:
+    # @ بس في الـ authority (user@host) بيخفي الوجهة؛ @ في المسار (@username) طبيعي
+    if feats["has_at_symbol"] and "@" in urlparse(url if "://" in url else f"http://{url}").netloc:
         add("AT_SYMBOL", "وجود @ في اللينك بيخفي الوجهة الحقيقية", 30)
     if feats["brand_in_subdomain_not_domain"]:
         add("BRAND_SPOOF", "اسم براند معروف في subdomain مش في الدومين الأساسي", 40)

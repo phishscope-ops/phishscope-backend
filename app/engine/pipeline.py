@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.analysis.trusted import trusted_platform
 from app.analysis.classifier import classify
 from app.analysis.domain_intel import gather_domain_intel
 from app.analysis.email_headers import email_findings, header_checks, parse_eml
@@ -35,12 +36,15 @@ def _add_evidence(db: Session, analysis_id, source, provider, etype, state, data
         analysis_id=analysis_id, source=source, provider=provider,
         evidence_type=etype, state=state, data=data, weight=weight,
         content_hash=_hash(data)))
+    # commit بعد كل مرحلة عشان التطبيق يشوف التقدم الحقيقي (مرحلة بمرحلة) وهو بيعمل poll
+    db.commit()
 
 
 async def run_analysis(db: Session, analysis: Analysis) -> Analysis:
     start = time.perf_counter()
     analysis.status = ScanStatus.processing
     db.flush()
+    db.commit()
     content = analysis.raw_input
     itype = analysis.input_type or classify(content)
     analysis.input_type = itype
@@ -139,6 +143,11 @@ async def run_analysis(db: Session, analysis: Analysis) -> Analysis:
             evidence_rows.append({"source": "ml_model", "state": ml_ev["state"],
                                   "verdict": None})
             mf = ml_client.ml_finding(ml_ev)
+            if mf and mf["rule"] == "ML_PHISHING" and itype in (ScanType.url, ScanType.qr) and urls:
+                plat = trusted_platform(urls[0])
+                if plat:  # منصة معروفة: الموديل اللغوي بيغلط في روابط السوشيال الطويلة
+                    mf = {"rule": "ML_TRUSTED_PLATFORM_DISCOUNT", "weight": 0,
+                          "detail": f"الرابط على منصة معروفة ({plat}): تم تجاهل توقع الموديل اللغوي"}
             if mf:
                 findings.append(mf)
 
