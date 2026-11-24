@@ -33,6 +33,13 @@ def _check(request: Request) -> None:
         raise HTTPException(401, "Unauthorized")
 
 
+def _mask(e):
+    if not e:
+        return None
+    u, _, d = e.partition("@")
+    return u[:2] + "***@" + d
+
+
 def _iso(d):
     return d.isoformat() if d else None
 
@@ -64,10 +71,10 @@ def overview(request: Request, db: Session = Depends(get_db)):
                    "never_logged_in": sum(1 for u in users if not u.last_login_at)},
         "signups_per_day": [[str(d), c] for d, c in signups],
         "scans_per_day": [[str(d), c] for d, c in scans],
-        "users": [{"email": u.email, "name": u.full_name, "role": u.role.value, "active": u.is_active,
+        "users": [{"email": _mask(u.email), "name": u.full_name, "role": u.role.value, "active": u.is_active,
                    "created_at": _iso(u.created_at), "last_login_at": _iso(u.last_login_at),
                    "scans": counts.get(u.id, 0)} for u in users],
-        "events": [{"at": _iso(e.created_at), "action": e.action, "email": emails.get(e.user_id) if e.user_id else (e.metadata_ or {}).get("email_masked"),
+        "events": [{"at": _iso(e.created_at), "action": e.action, "email": _mask(emails.get(e.user_id)) if e.user_id else (e.metadata_ or {}).get("email_masked"),
                     "ip": e.ip} for e in events],
         "top_ips": [{"ip": i, "sessions": c, "last": _iso(m)} for i, c, m in ips],
     }

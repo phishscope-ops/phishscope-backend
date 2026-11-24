@@ -21,6 +21,12 @@ class AdminTests(unittest.TestCase):
         r = self.c.get("/api/admin/overview", headers={"X-Admin-Token": "x" * 32})
         self.assertEqual(r.status_code, 200)
         self.assertIn("totals", r.json())
+        self.c.post("/api/auth/register", json={"email": "maskme@example.com", "password": "Str0ng-Pass-123!", "full_name": "x"})
+        body = self.c.get("/api/admin/overview", headers={"X-Admin-Token": "x" * 32}).text
+        self.assertIn("ma***@example.com", body)
+        self.assertNotIn("maskme", body)
+        self.assertNotIn("password", body.lower())
+        self.assertNotIn("$argon2", body)
         self.assertEqual(self.c.get("/admin").status_code, 200)
         os.environ.pop("ADMIN_TOKEN", None)
 
