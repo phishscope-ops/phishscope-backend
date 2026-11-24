@@ -94,9 +94,9 @@ def ml_finding(ml_evidence: dict) -> dict | None:
         else:
             weight = 60 + round(19 * min(1.0, (proba - 0.8) / 0.2))
         return {"rule": "ML_PHISHING",
-                "detail": f"موديل {ver} متوقع تصيد باحتمال {proba:.0%}", "weight": weight}
+                "detail": f"التحليل الآلي لشكل الرابط متوقع تصيد باحتمال {proba:.0%}", "weight": weight}
     if proba <= 0.05:
         # تنبيه معلوماتي فقط - وزن صفر: توقع "سليم" من الموديل مش بيقلل أدلة تانية أبداً
         return {"rule": "ML_CLEAN_HIGH_CONF",
-                "detail": f"موديل {ver} واثق إن الرابط سليم ({1 - proba:.0%})", "weight": 0}
+                "detail": f"التحليل الآلي واثق إن الرابط سليم ({1 - proba:.0%})", "weight": 0}
     return None

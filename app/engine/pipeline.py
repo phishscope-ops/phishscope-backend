@@ -143,7 +143,9 @@ async def run_analysis(db: Session, analysis: Analysis) -> Analysis:
             evidence_rows.append({"source": "ml_model", "state": ml_ev["state"],
                                   "verdict": None})
             mf = ml_client.ml_finding(ml_ev)
-            if mf and mf["rule"] == "ML_PHISHING" and itype in (ScanType.url, ScanType.qr) and urls:
+            url_model_scored = itype in (ScanType.url, ScanType.qr) or (
+                itype == ScanType.sms and ml_ev.get("data", {}).get("context") == "arabic_sms_url_model")
+            if mf and mf["rule"] == "ML_PHISHING" and url_model_scored and urls:
                 plat = trusted_platform(urls[0])
                 if plat:  # منصة معروفة: الموديل اللغوي بيغلط في روابط السوشيال الطويلة
                     mf = {"rule": "ML_TRUSTED_PLATFORM_DISCOUNT", "weight": 0,
