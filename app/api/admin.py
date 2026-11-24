@@ -71,7 +71,7 @@ def overview(request: Request, db: Session = Depends(get_db)):
                    "never_logged_in": sum(1 for u in users if not u.last_login_at)},
         "signups_per_day": [[str(d), c] for d, c in signups],
         "scans_per_day": [[str(d), c] for d, c in scans],
-        "users": [{"email": _mask(u.email), "name": u.full_name, "role": u.role.value, "active": u.is_active,
+        "users": [{"email": _mask(u.email), "role": u.role.value, "active": u.is_active,
                    "created_at": _iso(u.created_at), "last_login_at": _iso(u.last_login_at),
                    "scans": counts.get(u.id, 0)} for u in users],
         "events": [{"at": _iso(e.created_at), "action": e.action, "email": _mask(emails.get(e.user_id)) if e.user_id else (e.metadata_ or {}).get("email_masked"),
@@ -94,7 +94,7 @@ const d=await r.json(),t=d.totals;let h='';
 h+='<p><span class=k>مستخدمين: '+t.users+'</span><span class=k>فحوصات: '+t.analyses+'</span><span class=k>محاولات دخول فاشلة 24س: '+t.failed_logins_24h+'</span><span class=k>مسجلين ومادخلوش: '+t.never_logged_in+'</span></p>';
 h+='<h3>تسجيلات جديدة (14 يوم)</h3>'+tb(['اليوم','العدد'],d.signups_per_day);
 h+='<h3>فحوصات (14 يوم)</h3>'+tb(['اليوم','العدد'],d.scans_per_day);
-h+='<h3>المستخدمين</h3>'+tb(['الايميل','الاسم','دور','تسجيل','آخر دخول','فحوصات'],d.users.map(u=>[u.email,u.name,u.role,u.created_at,u.last_login_at,u.scans]));
+h+='<h3>المستخدمين</h3>'+tb(['الايميل','دور','تسجيل','آخر دخول','فحوصات'],d.users.map(u=>[u.email,u.role,u.created_at,u.last_login_at,u.scans]));
 h+='<h3>آخر الأحداث</h3>'+tb(['وقت','حدث','ايميل','IP'],d.events.map(e=>[e.at,e.action,e.email,e.ip]));
 h+='<h3>IP</h3>'+tb(['IP','جلسات','آخر'],d.top_ips.map(i=>[i.ip,i.sessions,i.last]));
 document.getElementById('o').innerHTML=h}</script></html>"""
