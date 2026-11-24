@@ -267,7 +267,7 @@ class Report(Base):
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
-    id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(sa.BigInteger().with_variant(sa.Integer, "sqlite"), primary_key=True, autoincrement=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(GUID, sa.ForeignKey("users.id", ondelete="SET NULL"), index=True)
     action: Mapped[str] = mapped_column(sa.String(100), index=True)
     entity: Mapped[str | None] = mapped_column(sa.String(50))

@@ -34,6 +34,8 @@ def register(body: RegisterIn, request: Request, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenOut)
 def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
+    xff = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    cip = (xff or (request.client.host if request.client else None) or "")[:45] or None
     user = db.execute(select(User).where(User.email == body.email.strip().lower())).scalar_one_or_none()
     now = datetime.now(timezone.utc)
     if user and user.locked_until:
@@ -41,19 +43,22 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         if locked > now:
             raise HTTPException(status.HTTP_423_LOCKED, "Account locked, try again later")
     if not user or not verify_password(body.password, user.password_hash):
+        if not user:
+            audit(db, "login_failed_unknown", entity="users", ip=cip,
+                  email_masked=body.email.strip().lower()[:2] + "***")
+            db.commit()
         if user:
             user.failed_logins += 1
             if user.failed_logins >= MAX_FAILED:
                 user.locked_until = now + timedelta(minutes=LOCK_MINUTES)
                 user.failed_logins = 0
                 audit(db, "account_locked", user_id=user.id, entity="users", entity_id=str(user.id))
-            audit(db, "login_failed", entity="users", entity_id=str(user.id))
+            audit(db, "login_failed", user_id=user.id, entity="users", entity_id=str(user.id), ip=cip)
             db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
     user.failed_logins = 0
     user.last_login_at = now
-    audit(db, "login_success", user_id=user.id, entity="users", entity_id=str(user.id),
-          ip=request.client.host if request.client else None)
+    audit(db, "login_success", user_id=user.id, entity="users", entity_id=str(user.id), ip=cip)
     db.commit()
     return _issue_tokens(db, user, request)
 
