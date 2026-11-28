@@ -8,6 +8,7 @@ qualify when the target they carry is also on a listed platform.
 The discount applies to the ML (URL lexical model) finding only; threat-intel and
 every other rule still apply in full.
 """
+import re
 from urllib.parse import parse_qsl, unquote, urlparse
 
 TRUSTED_PLATFORMS = (
@@ -19,6 +20,19 @@ TRUSTED_PLATFORMS = (
     "whatsapp.com", "wa.me", "whatsapp.net",
     "accounts.google.com",  # exact sign-in host only (YouTube login); google.com itself is NOT listed
 )
+
+
+# Google Drive / Docs viewing links. These hosts also serve user content, so only exact
+# document-view paths qualify (no forms, no sites, no open?id= redirects, no query targets).
+_GDRIVE_HOSTS = ("drive.google.com", "docs.google.com")
+_GDRIVE_PATH = re.compile(
+    r"^/(?:file|document|spreadsheets|presentation)/d/[A-Za-z0-9_-]{3,100}"
+    r"(?:/(?:view|edit|preview|pub|copy|htmlview|export))?/?$"
+    r"|^/drive/(?:u/\d+/)?folders/[A-Za-z0-9_-]{3,100}/?$")
+
+
+def _gdrive_view(p) -> bool:
+    return p.hostname.lower().rstrip(".") in _GDRIVE_HOSTS and bool(_GDRIVE_PATH.match(p.path))
 
 
 def _platform_of(host: str) -> str | None:
@@ -46,6 +60,10 @@ def trusted_platform(url: str) -> str | None:
         return None
     if p.scheme != "https" or "@" in p.netloc or not p.hostname:
         return None
+    if _gdrive_view(p):
+        for target in _embedded_urls(p):
+            return None  # any URL carried in the query/fragment: score normally
+        return p.hostname.lower().rstrip(".")
     plat = _platform_of(p.hostname)
     if not plat:
         return None

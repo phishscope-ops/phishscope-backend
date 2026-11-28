@@ -20,6 +20,10 @@ OK = [
     "https://web.whatsapp.com/",
     "https://wa.me/201001234567",
     "https://l.instagram.com/?u=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc&e=AT0x",
+    "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view?usp=sharing",
+    "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/edit",
+    "https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/edit#gid=0",
+    "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWxYz012345",
     "https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin",
 ]
 BAD = [
@@ -35,6 +39,16 @@ BAD = [
     "http://www.instagram.com/reel/abc/",
     "https://instagram-security-check.com/verify",
     "https://docs.google.com/forms/d/abc",
+    "https://docs.google.com/forms/d/e/1FAIpQLSabcdefgh/viewform",
+    "https://sites.google.com/view/secure-login",
+    "https://drive.google.com/uc?export=download&id=1AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+    "https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+    "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view?continue=https%3A%2F%2Fevil.tk",
+    "http://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view",
+    "https://drive.google.com.evil-share.tk/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view",
+    "https://drive-google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view",
+    "https://docs.google.com@evil.tk/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/edit",
+    "https://www.google.com/url?q=https://drive.google.com/file/d/1abcde/view",
     "https://paypal.com.secure-update.ml/login",
 ]
 
